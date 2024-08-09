@@ -9,7 +9,8 @@ import (
 )
 
 const (
-	ApiUrl = "https://openexchangerates.org/api/latest.json"
+	ApiUrl       = "https://openexchangerates.org/api/latest.json"
+	BaseCurrency = "USD"
 )
 
 type ExchangeRatesOrigin struct {
@@ -37,8 +38,8 @@ func getExchangeRates(currencies []string) ([]ExchangeRate, error) {
 }
 
 func fetchOriginalRates() (*ExchangeRatesOrigin, error) {
-	//url := fmt.Sprintf("%s?app_id=%s", ApiUrl, os.Getenv("API_KEY"))
-	url := fmt.Sprintf("%s?app_id=%s", ApiUrl, "7b71cb28026d416682badf33cae16d88")
+	//url := fmt.Sprintf("%s?base=USD&app_id=%s", ApiUrl, os.Getenv("OPENEXCHANGERATE_APP_ID"))
+	url := fmt.Sprintf("%s?base=%s&app_id=%s", ApiUrl, BaseCurrency, "7b71cb28026d416682badf33cae16d88")
 
 	// Make the HTTP request
 	resp, err := http.Get(url)
@@ -63,9 +64,20 @@ func fetchOriginalRates() (*ExchangeRatesOrigin, error) {
 
 func calculateRatesFromOrigin(origin *ExchangeRatesOrigin, currencies []string) []ExchangeRate {
 	var rates []ExchangeRate
+	usdExchangeRates := make(map[string]float64)
+
 	for _, curr := range currencies {
-		rate := ExchangeRate{origin.Base, curr, origin.Rates[curr]}
-		rates = append(rates, rate)
+		usdExchangeRates[curr] = origin.Rates[curr]
+
+	}
+
+	for _, fromCurr := range currencies {
+		for _, toCurr := range currencies {
+			if fromCurr != toCurr {
+				rate := ExchangeRate{fromCurr, toCurr, usdExchangeRates[fromCurr] / usdExchangeRates[toCurr]}
+				rates = append(rates, rate)
+			}
+		}
 	}
 
 	return rates
