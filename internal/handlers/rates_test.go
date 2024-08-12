@@ -6,17 +6,24 @@ import (
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
+var (
+	r *gin.Engine
+	w *httptest.ResponseRecorder
+)
+
+func TestMain(m *testing.M) {
+	gin.SetMode(gin.TestMode)
+	r = gin.Default()
+	r.GET("/rates", GetFiatExchangeRates)
+	os.Exit(m.Run())
+}
+
 func TestGetFiatExchangeRatesHandler(t *testing.T) {
 	defer gock.Off()
-
-	r := gin.Default()
-	r.GET("/rates", GetFiatExchangeRates)
-
-	w := httptest.NewRecorder()
-
 	gock.New(ApiUrl).
 		Get(ApiPath).
 		Reply(200).
@@ -25,6 +32,8 @@ func TestGetFiatExchangeRatesHandler(t *testing.T) {
 			"GBP": 1.5,
 			"CHF": 1.0,
 		}})
+
+	w = httptest.NewRecorder()
 
 	expected := "[{\"from\":\"PLN\",\"to\":\"GBP\",\"rate\":2.6666666666666665},{\"from\":\"PLN\",\"to\":\"CHF\",\"rate\":4},{\"from\":\"GBP\",\"to\":\"PLN\",\"rate\":0.375},{\"from\":\"GBP\",\"to\":\"CHF\",\"rate\":1.5},{\"from\":\"CHF\",\"to\":\"PLN\",\"rate\":0.25},{\"from\":\"CHF\",\"to\":\"GBP\",\"rate\":0.6666666666666666}]"
 
@@ -39,11 +48,7 @@ func TestGetFiatExchangeRatesHandler(t *testing.T) {
 }
 
 func TestGetFiatExchangeRatesHandlerWrongParametersFailure(t *testing.T) {
-	r := gin.Default()
-	r.GET("/rates", GetFiatExchangeRates)
-
-	w := httptest.NewRecorder()
-
+	w = httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/rates?currencies=PLN", nil)
 	r.ServeHTTP(w, req)
 
@@ -51,11 +56,7 @@ func TestGetFiatExchangeRatesHandlerWrongParametersFailure(t *testing.T) {
 }
 
 func TestGetFiatExchangeRatesHandlerEmptyParametersFailure(t *testing.T) {
-	r := gin.Default()
-	r.GET("/rates", GetFiatExchangeRates)
-
-	w := httptest.NewRecorder()
-
+	w = httptest.NewRecorder()
 	req, _ := http.NewRequest("GET", "/rates?currencies=", nil)
 	r.ServeHTTP(w, req)
 
