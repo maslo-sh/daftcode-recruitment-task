@@ -1,8 +1,8 @@
-package server
+package internal
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/maslo-sh/daftcode-recruitment-task/server/handlers"
+	handlers "github.com/maslo-sh/daftcode-recruitment-task/internal/handlers"
 )
 
 func RegisterRoutes(r *gin.Engine) {

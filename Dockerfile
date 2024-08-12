@@ -11,7 +11,8 @@ RUN go mod download
 
 # Copy the source code. Note the slash at the end, as explained in
 # https://docs.docker.com/engine/reference/builder/#copy
-COPY . .
+COPY internal/ internal/
+COPY cmd/main.go main.go
 
 # Build
 RUN go build -o /crypto-exchange-rate

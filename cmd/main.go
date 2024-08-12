@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/maslo-sh/daftcode-recruitment-task/server"
+	"github.com/maslo-sh/daftcode-recruitment-task/internal"
 )
 
 func main() {
-	server.RunServer()
+	internal.RunServer()
 }
