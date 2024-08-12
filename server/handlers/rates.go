@@ -5,27 +5,29 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"os"
 	"strings"
 )
 
 const (
-	ApiUrl       = "https://openexchangerates.org/api/latest.json"
-	BaseCurrency = "USD"
+	ApiUrl        = "https://openexchangerates.org"
+	ApiPath       = "/api/latest.json"
+	ApiKeyEnvName = "OPENEXCHANGERATE_APP_ID"
 )
 
-type ExchangeRatesOrigin struct {
+type FiatExchangeRatesOrigin struct {
 	Base  string             `json:"base"`
 	Rates map[string]float64 `json:"rates"`
 }
 
-type ExchangeRate struct {
+type FiatExchangeRate struct {
 	From string  `json:"from"`
 	To   string  `json:"to"`
 	Rate float64 `json:"rate"`
 }
 
 // Function to fetch exchange rates
-func getExchangeRates(currencies []string) ([]ExchangeRate, error) {
+func getExchangeRates(currencies []string) ([]FiatExchangeRate, error) {
 	origin, err := fetchOriginalRates()
 
 	if err != nil {
@@ -37,9 +39,9 @@ func getExchangeRates(currencies []string) ([]ExchangeRate, error) {
 	return rates, nil
 }
 
-func fetchOriginalRates() (*ExchangeRatesOrigin, error) {
-	//url := fmt.Sprintf("%s?base=USD&app_id=%s", ApiUrl, os.Getenv("OPENEXCHANGERATE_APP_ID"))
-	url := fmt.Sprintf("%s?base=%s&app_id=%s", ApiUrl, BaseCurrency, "7b71cb28026d416682badf33cae16d88")
+func fetchOriginalRates() (*FiatExchangeRatesOrigin, error) {
+	url := fmt.Sprintf("%s%s?base=USD&app_id=%s", ApiUrl, ApiPath, os.Getenv(ApiKeyEnvName))
+	//url := fmt.Sprintf("%s?base=%s&app_id=%s", ApiUrl, BaseCurrency, "7b71cb28026d416682badf33cae16d88")
 
 	// Make the HTTP request
 	resp, err := http.Get(url)
@@ -54,7 +56,7 @@ func fetchOriginalRates() (*ExchangeRatesOrigin, error) {
 	}
 
 	// Deserialize the JSON response into the ExchangeRates struct
-	var exchangeRates ExchangeRatesOrigin
+	var exchangeRates FiatExchangeRatesOrigin
 	if err := json.NewDecoder(resp.Body).Decode(&exchangeRates); err != nil {
 		return nil, ErrJsonDecode
 	}
@@ -62,19 +64,19 @@ func fetchOriginalRates() (*ExchangeRatesOrigin, error) {
 	return &exchangeRates, nil
 }
 
-func calculateRatesFromOrigin(origin *ExchangeRatesOrigin, currencies []string) []ExchangeRate {
-	var rates []ExchangeRate
-	usdExchangeRates := make(map[string]float64)
+func calculateRatesFromOrigin(origin *FiatExchangeRatesOrigin, currencies []string) []FiatExchangeRate {
+	var rates []FiatExchangeRate
+	baseExchangeRates := make(map[string]float64)
 
 	for _, curr := range currencies {
-		usdExchangeRates[curr] = origin.Rates[curr]
+		baseExchangeRates[curr] = origin.Rates[curr]
 
 	}
 
 	for _, fromCurr := range currencies {
 		for _, toCurr := range currencies {
-			if fromCurr != toCurr {
-				rate := ExchangeRate{fromCurr, toCurr, usdExchangeRates[fromCurr] / usdExchangeRates[toCurr]}
+			if fromCurr != toCurr && baseExchangeRates[toCurr]*baseExchangeRates[fromCurr] != 0 {
+				rate := FiatExchangeRate{fromCurr, toCurr, baseExchangeRates[fromCurr] / baseExchangeRates[toCurr]}
 				rates = append(rates, rate)
 			}
 		}
@@ -83,10 +85,11 @@ func calculateRatesFromOrigin(origin *ExchangeRatesOrigin, currencies []string) 
 	return rates
 }
 
-func GetRates(c *gin.Context) {
+func GetFiatExchangeRates(c *gin.Context) {
 	currencies := c.Query("currencies")
 
 	if currencies == "" {
+		fmt.Printf("failed to get rates: %v\n", ErrParam)
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -94,14 +97,16 @@ func GetRates(c *gin.Context) {
 	currenciesArr := strings.Split(currencies, ",")
 
 	if len(currenciesArr) == 1 {
+		fmt.Printf("failed to get rates: %v\n", ErrParam)
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	rates, err := getExchangeRates(currenciesArr)
 	if err != nil {
-		fmt.Printf("failed to get rates: %v", err)
+		fmt.Printf("failed to get rates: %v\n", err)
 		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
 
 	c.JSON(http.StatusOK, &rates)

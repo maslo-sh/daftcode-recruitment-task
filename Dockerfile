@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM golang:1.22
+FROM golang:1.22.6
 
 # Set destination for COPY
 WORKDIR /app
@@ -12,8 +12,6 @@ RUN go mod download
 # Copy the source code. Note the slash at the end, as explained in
 # https://docs.docker.com/engine/reference/builder/#copy
 COPY . .
-
-ENV OPENEXCHANGERATE_APP_ID 7b71cb28026d416682badf33cae16d88
 
 # Build
 RUN go build -o /crypto-exchange-rate

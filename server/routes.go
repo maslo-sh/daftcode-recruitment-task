@@ -6,6 +6,6 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine) {
-	r.GET("/rates", handlers.GetRates)
-	r.GET("/exchange", handlers.CalculateExchange)
+	r.GET("/rates", handlers.GetFiatExchangeRates)
+	r.GET("/exchange", handlers.GetCryptoExchangeRates)
 }
